@@ -32,6 +32,7 @@ import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -309,12 +310,12 @@ class WordCoachViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    /** Возврат к экрану токена: например, если доступ отозвали или ключ истёк. */
+    /** Возврат к экрану токена: например, если доступ отозвали или ключ истёк.
+     *  Прогресс не сбрасываем: .part остался, с новым токеном докачаем с того же места. */
     fun changeToken() {
         downloadJob?.cancel()
         downloadJob = null
         isDownloading = false
-        downloadProgress = 0f
         engineError = null
         tokenError = null
         isTokenRequired = true
@@ -364,26 +365,53 @@ class WordCoachViewModel(application: Application) : AndroidViewModel(applicatio
         downloadProgress = 0f
 
         // Качаем во временный файл и только потом переименовываем:
-        // если прибить приложение на середине, рядом не останется битой модели
+        // если прибить приложение на середине, рядом не останется битой модели.
+        // Частичный файл при обрыве НЕ удаляем — следующий прогон докачает
+        // через Range с того места, где связь оборвалась
         val tmp = File(app.filesDir, "$MODEL_FILE_NAME.part")
         try {
-            val request = Request.Builder()
+            val resumeFrom = if (tmp.exists()) tmp.length() else 0L
+
+            val requestBuilder = Request.Builder()
                 .url(MODEL_DOWNLOAD_URL)
                 .addHeader("Authorization", "Bearer $hfToken")
-                .build()
+            if (resumeFrom > 0) {
+                requestBuilder.header("Range", "bytes=$resumeFrom-")
+            }
 
-            httpClient.newCall(request).execute().use { response ->
+            httpClient.newCall(requestBuilder.build()).execute().use { response ->
                 // 401/403 не лечится повтором — сразу отправляем за новым токеном
                 if (response.code == 401 || response.code == 403) {
                     throw AuthException(response.code)
                 }
+
+                if (response.code == 416) {
+                    // .part длиннее, чем файл на сервере: модель на HF обновилась.
+                    // Хвост бесполезен — сносим и качаем заново с нуля
+                    Log.w(TAG, "Range выходит за размер файла, качаем с нуля")
+                    tmp.delete()
+                    downloadProgress = 0f
+                    downloadModel(target)
+                    return
+                }
+
+                // 206 = сервер принял Range и отдаёт остаток (append),
+                // 200 = Range проигнорирован — качаем с нуля поверх недокачанного хвоста
+                val appending = response.code == 206
                 if (!response.isSuccessful) throw Exception("HTTP ${response.code}")
-                val body = response.body
+                // body nullable в OkHttp 4.x: пустой ответ — это сетевой сбой, качаем заново
+                val body = response.body ?: throw IOException("Пустое тело ответа от сервера")
 
-                val totalBytes = body.contentLength()
-                var bytesRead = 0L
+                val contentLength = body.contentLength()
+                // Для 206 contentLength — размер ОСТАТКА; общий прогресс считаем от полного файла
+                val totalBytes = if (appending && contentLength > 0) resumeFrom + contentLength else contentLength
+                var bytesRead = if (appending) resumeFrom else 0L
+                if (totalBytes > 0) {
+                    downloadProgress = bytesRead.toFloat() / totalBytes
+                }
 
-                tmp.outputStream().use { output ->
+                // append=true — докачиваем в существующий .part, append=false — пишем с нуля
+                FileOutputStream(tmp, appending).use { output ->
                     body.byteStream().use { input ->
                         val buffer = ByteArray(64 * 1024)
                         var read: Int
@@ -419,18 +447,16 @@ class WordCoachViewModel(application: Application) : AndroidViewModel(applicatio
 
             prepareEngine()
         } catch (e: CancellationException) {
-            tmp.delete()
+            // .part сохраняем: после смены токена загрузка продолжится с того же места
             downloadProgress = 0f
             throw e
         } catch (e: AuthException) {
             Log.e(TAG, "HF отклонил токен: HTTP ${e.code}")
-            tmp.delete()
             downloadProgress = 0f
             tokenError = authMessage(e.code)
             isTokenRequired = true
         } catch (e: Exception) {
             Log.e(TAG, "Ошибка скачивания модели", e)
-            tmp.delete()
             downloadProgress = 0f
             engineError = app.getString(R.string.err_download, e.message.orEmpty())
         } finally {
