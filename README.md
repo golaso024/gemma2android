@@ -18,7 +18,8 @@ Test vocabulary, guess semantic word associations, and get instant, context-awar
 - **🎮 Word Coach Vocabulary Game**: Generates endless multiple-choice quiz questions focusing on subtle synonyms, vocabulary nuances, and word meanings (5 questions per round).
 - **⚡ Zero-Latency Background Prefetching**: Utilizes asynchronous Kotlin Coroutines (`Deferred<WordCard>`) to pre-generate the next question in the background while the user answers the current one.
 - **💡 "Learn Why" (Deep Explanations)**: Tap any completed card to generate an on-demand, nuanced linguistic explanation explaining why words are related.
-- **🔐 Secure Hugging Face Token Gate**: Seamless download experience for gated models. Paste your token once; it is stored safely in Android `Encrypted/Private SharedPreferences` and verified via pre-flight HTTP probe.
+- **🔐 Secure Hugging Face Token Gate**: Seamless download experience for gated models. Paste your token once; it lives in app-private storage (excluded from cloud backups and device transfers) and is verified via a pre-flight HTTP probe.
+- **📶 Resumable Downloads**: A dropped Wi-Fi connection or a killed app does not reset the ~550 MB download — the next attempt continues from the last received byte via HTTP `Range` requests.
 - **🎨 Modern Material 3 UI**: Built from the ground up with Jetpack Compose, edge-to-edge layout, responsive progress tracking, and Russian + English localization.
 
 ---
@@ -43,7 +44,7 @@ The app and INT4-quantized model have been tested and verified to deliver smooth
 | **File Name** | `gemma3-1b-it-int4.litertlm` (~550 MB) |
 | **Hugging Face Repository** | [`litert-community/Gemma3-1B-IT`](https://huggingface.co/litert-community/Gemma3-1B-IT) |
 | **Runtime Engine** | `com.google.ai.edge.litertlm:litertlm-android:0.17.1` |
-| **Sampling Configurations** | • Card Generation: `temperature = 0.8`, `topK = 40`<br>• Tutor Explanations: `temperature = 0.3`, `topK = 40` |
+| **Sampling Configurations** | • Card Generation: `temperature = 0.6`, `topK = 10`, `topP = 0.6`<br>• Tutor Explanations: `temperature = 0.3`, `topK = 20`, `topP = 0.8` |
 
 ---
 
@@ -61,7 +62,7 @@ The app and INT4-quantized model have been tested and verified to deliver smooth
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    WordCoachViewModel                       │
-│  - Pre-flight HF Token Probe (HEAD https://huggingface.co)  │
+│  - Pre-flight HF Token Probe (GET with Range: bytes=0-0)    │
 │  - OkHttp Resumable Downloader (app.filesDir)               │
 │  - Dual ConversationConfig Management (Creative vs Precise) │
 │  - Asynchronous Background Prefetching Queue                │
@@ -82,8 +83,8 @@ The app and INT4-quantized model have been tested and verified to deliver smooth
 
 1. **Mutex Serialization (`gemmaMutex = Mutex()`)**: LLM weight access and context buffers cannot be evaluated simultaneously from concurrent threads. The ViewModel synchronizes question generation and explanation requests via coroutine mutex locks.
 2. **Dual-Temperature Sampling**:
-   - Question cards require lexical variety and creative distractors $\rightarrow$ `temperature = 0.8f`.
-   - Explanations require factual linguistic accuracy and grounding $\rightarrow$ `temperature = 0.3f`.
+   - Question cards require lexical variety and creative distractors $\rightarrow$ `temperature = 0.6f`, `topK = 10`, `topP = 0.6`.
+   - Explanations require factual linguistic accuracy and grounding $\rightarrow$ `temperature = 0.3f`, `topK = 20`, `topP = 0.8`.
 3. **Optimized Model Packaging**: `build.gradle.kts` specifies `androidResources { noCompress.add("litertlm") }` to prevent Android package compressors from corrupting memory-mapped model weights.
 
 ---
