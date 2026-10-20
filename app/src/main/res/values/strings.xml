@@ -1,0 +1,57 @@
+<resources>
+    <string name="app_name">LanguageLLM</string>
+
+    <!-- Top bar -->
+    <string name="score">Score: %1$d</string>
+
+    <!-- Engine setup -->
+    <string name="engine_starting">Starting the model…</string>
+    <string name="start_game">Start game</string>
+    <string name="card_generating">AI is picking a word…</string>
+    <string name="error_with_message">Error: %1$s</string>
+    <string name="retry">Retry</string>
+    <string name="change_token">Change token</string>
+    <string name="download_progress">Downloading the model: %1$d%%</string>
+    <string name="download_indeterminate">Downloading the model…</string>
+
+    <!-- Game -->
+    <string name="question_counter">Question %1$d of %2$d</string>
+    <string name="question_prompt">Which word is similar to [%1$s]?</string>
+    <string name="round_completed">Round Completed!</string>
+    <string name="word_interpretations">Word Interpretations</string>
+    <string name="restart">Start over</string>
+    <string name="ai_thinking">AI is thinking…</string>
+    <string name="result_word_similar">Word Similar To %1$s?</string>
+    <string name="result_correct">Correct: %1$s</string>
+    <string name="result_wrong">Wrong: %1$s</string>
+    <string name="learn_why">LEARN WHY</string>
+    <string name="explanation_tap_hint">Tap to load an explanation</string>
+
+    <!-- Token gate -->
+    <string name="token_title">Connect the model</string>
+    <string name="token_subtitle">Gemma 3 1B lives in a gated Hugging Face repository. Paste your token — it is stored on this device only.</string>
+    <string name="token_label">Hugging Face token</string>
+    <string name="token_placeholder">hf_…</string>
+    <string name="token_show">Show</string>
+    <string name="token_hide">Hide</string>
+    <string name="token_paste">Paste token from clipboard</string>
+    <string name="token_clear">Reset token</string>
+    <string name="token_save_and_download">Save and download</string>
+    <string name="token_repo_pill">litert-community / Gemma3-1B-IT</string>
+    <string name="token_repo_hint">No access? Open the repository, tap “Agree and access repository”, then come back and paste the token.</string>
+
+    <!-- Errors -->
+    <string name="err_token_empty">Paste a token — the model cannot be downloaded without it.</string>
+    <string name="err_clipboard_empty">Clipboard is empty — copy your Hugging Face token first.</string>
+    <string name="err_token_rejected">Hugging Face rejected the token. Check that it was copied in full and is still active.</string>
+    <string name="err_no_repo_access">The token is valid, but this account has no access to the model. Open the repository via the link below and tap “Agree and access repository”.</string>
+    <string name="err_http">Hugging Face returned HTTP %1$d. Try again later.</string>
+    <string name="err_network">Could not reach Hugging Face. Check your connection and try again.</string>
+    <string name="err_download">Could not download the model (%1$s). Check your connection and try again.</string>
+    <string name="err_connection_lost">connection dropped at %1$d MB</string>
+    <string name="err_engine_start">Could not start the model: %1$s</string>
+    <string name="err_no_card">The model did not return a card.</string>
+    <string name="explanation_loading">Loading the explanation…</string>
+    <string name="explanation_no_engine">The model is not started yet.</string>
+    <string name="explanation_failed">Could not load the explanation.</string>
+</resources>
